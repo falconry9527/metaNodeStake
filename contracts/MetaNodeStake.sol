@@ -17,12 +17,13 @@ contract MetaNodeStake is
     PausableUpgradeable,
     AccessControlUpgradeable
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20; // using ： 声明 SafeERC20 可以调用 IERC20 所欲的的函数
     using Address for address;
     using Math for uint256;
 
     // ************************************** INVARIANT **************************************
 
+    // 管理员 和 升级人
     bytes32 public constant ADMIN_ROLE = keccak256("admin_role");
     bytes32 public constant UPGRADE_ROLE = keccak256("upgrade_role");
 
@@ -32,46 +33,59 @@ contract MetaNodeStake is
     /*
     Basically, any point in time, the amount of MetaNodes entitled to a user but is pending to be distributed is:
 
+    // 获取代币奖励的计算公式 
     pending MetaNode = (user.stAmount * pool.accMetaNodePerST) - user.finishedMetaNode
 
     Whenever a user deposits or withdraws staking tokens to a pool. Here's what happens:
+    // staking tokens   质押的代币
     1. The pool's `accMetaNodePerST` (and `lastRewardBlock`) gets updated.
     2. User receives the pending MetaNode sent to his/her address.
     3. User's `stAmount` gets updated.
     4. User's `finishedMetaNode` gets updated.
     */
     struct Pool {
-        // Address of staking token
+        // Address of staking token ：质押代币的地址
         address stTokenAddress;
-        // Weight of pool
-        uint256 poolWeight;
-        // Last block number that MetaNodes distribution occurs for pool
+        // Weight of pool ： 奖金池的高度
+        uint256 poolWeight; 
+        // Last block number that MetaNodes distribution occurs for pool 
+        // MetaNodes 为矿池分发的最后一个区块号 
         uint256 lastRewardBlock;
         // Accumulated MetaNodes per staking token of pool
+        // 累计 奖励的 MetaNodes
         uint256 accMetaNodePerST;
         // Staking token amount
+        // 质押代币的金额
         uint256 stTokenAmount;
         // Min staking amount
+        // 最小代币质押金额
         uint256 minDepositAmount;
         // Withdraw locked blocks
+        // 提现锁住的区块
         uint256 unstakeLockedBlocks;
     }
 
+   // 取消质押的请求
     struct UnstakeRequest {
-        // Request withdraw amount
+        // Request withdraw amount ：金额
         uint256 amount;
         // The blocks when the request withdraw amount can be released
+        // 取消质押的 区块
         uint256 unlockBlocks;
     }
 
     struct User {
         // Staking token amount that user provided
+        // 质押的代币数据
         uint256 stAmount;
         // Finished distributed MetaNodes to user
+        // 完成分配的 MetaNodes 数量
         uint256 finishedMetaNode;
         // Pending to claim MetaNodes
+        // 等待领取的节点
         uint256 pendingMetaNode;
         // Withdraw request list
+        // 提现请求列表
         UnstakeRequest[] requests;
     }
 
@@ -84,8 +98,10 @@ contract MetaNodeStake is
     uint256 public MetaNodePerBlock;
 
     // Pause the withdraw function
+    // 暂停提现功能
     bool public withdrawPaused;
     // Pause the claim function
+    // 暂停索赔功能
     bool public claimPaused;
 
     // MetaNode token
@@ -96,40 +112,43 @@ contract MetaNodeStake is
     Pool[] public pool;
 
     // pool id => user address => user info
+    // 用户的 mapping 
     mapping (uint256 => mapping (address => User)) public user;
 
     // ************************************** EVENT **************************************
-
+    // 一些日志事件
+   
     event SetMetaNode(IERC20 indexed MetaNode);
 
-    event PauseWithdraw();
+    event PauseWithdraw();// 暂停提现
 
-    event UnpauseWithdraw();
+    event UnpauseWithdraw(); //  取消 暂停提现
 
-    event PauseClaim();
+    event PauseClaim(); // 暂停索赔
 
-    event UnpauseClaim();
+    event UnpauseClaim(); //取消暂停索赔
 
-    event SetStartBlock(uint256 indexed startBlock);
+    event SetStartBlock(uint256 indexed startBlock); // 设置开始区块ID
 
-    event SetEndBlock(uint256 indexed endBlock);
+    event SetEndBlock(uint256 indexed endBlock); // 设置结束区块ID
 
-    event SetMetaNodePerBlock(uint256 indexed MetaNodePerBlock);
+    event SetMetaNodePerBlock(uint256 indexed MetaNodePerBlock); // 设置每个块的 metanode
 
+    // 添加一个池子
     event AddPool(address indexed stTokenAddress, uint256 indexed poolWeight, uint256 indexed lastRewardBlock, uint256 minDepositAmount, uint256 unstakeLockedBlocks);
-
+    // 更新池子的信息
     event UpdatePoolInfo(uint256 indexed poolId, uint256 indexed minDepositAmount, uint256 indexed unstakeLockedBlocks);
-
+    // 设置池子的高度
     event SetPoolWeight(uint256 indexed poolId, uint256 indexed poolWeight, uint256 totalPoolWeight);
-
+    // 更新池子
     event UpdatePool(uint256 indexed poolId, uint256 indexed lastRewardBlock, uint256 totalMetaNode);
-
+    // 存款
     event Deposit(address indexed user, uint256 indexed poolId, uint256 amount);
-
+    // 申请取消质押
     event RequestUnstake(address indexed user, uint256 indexed poolId, uint256 amount);
-
+    // 提现
     event Withdraw(address indexed user, uint256 indexed poolId, uint256 amount, uint256 indexed blockNumber);
-
+    // 索赔
     event Claim(address indexed user, uint256 indexed poolId, uint256 MetaNodeReward);
 
     // ************************************** MODIFIER **************************************
@@ -163,6 +182,7 @@ contract MetaNodeStake is
         __AccessControl_init();
         __UUPSUpgradeable_init();
          __Pausable_init();
+         // AccessControlUpgradeable 的方法： 授予权限
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(UPGRADE_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
@@ -187,6 +207,7 @@ contract MetaNodeStake is
 
     /**
      * @notice Set MetaNode token address. Can only be called by admin
+     * 设置 MetaNode 代币地址，仅管理员可调用
      */
     function setMetaNode(IERC20 _MetaNode) public onlyRole(ADMIN_ROLE) {
         MetaNode = _MetaNode;
