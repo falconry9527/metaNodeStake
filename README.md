@@ -34,5 +34,3 @@ npx hardhat deploy   --tags deployNftAuction --network sepolia
 npx hardhat deploy   --tags upgradeNftAuction --network sepolia 
 
 ```
-
-# metaNodeStake
