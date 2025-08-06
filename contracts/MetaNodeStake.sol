@@ -421,6 +421,7 @@ contract MetaNodeStake is
 
     /**
      * @notice Update reward variables of the given pool to be up-to-date.
+     * 更新某个pool（_pid） 的 accMetaNodePerST (每个币的累积奖励)
      */
     function updatePool(uint256 _pid) public checkPid(_pid) {
         Pool storage pool_ = pool[_pid];
@@ -465,6 +466,7 @@ contract MetaNodeStake is
 
     /**
      * @notice Deposit staking ETH for MetaNode rewards
+     * 存入eth 以获取 token 奖励
      */
     function depositETH() public whenNotPaused() payable {
         Pool storage pool_ = pool[ETH_PID];
@@ -479,7 +481,7 @@ contract MetaNodeStake is
     /**
      * @notice Deposit staking token for MetaNode rewards
      * Before depositing, user needs approve this contract to be able to spend or transfer their staking tokens
-     *
+     *  存入代币 以获得token奖励
      * @param _pid       Id of the pool to be deposited to
      * @param _amount    Amount of staking tokens to be deposited
      */
@@ -497,6 +499,8 @@ contract MetaNodeStake is
 
     /**
      * @notice Unstake staking tokens
+     * 
+     * 用户（msg.sende） 取消在某个 pool(_pid)质押的代币金额（_amount）
      *
      * @param _pid       Id of the pool to be withdrawn from
      * @param _amount    amount of staking tokens to be withdrawn
@@ -521,6 +525,8 @@ contract MetaNodeStake is
                 amount: _amount,
                 unlockBlocks: block.number + pool_.unstakeLockedBlocks
             }));
+            // unstakeLockedBlocks ：锁定 100个区块，避免发生挤兑
+            // 这里只是发送请求，具体取款逻辑在 548 行左右
         }
 
         pool_.stTokenAmount = pool_.stTokenAmount - _amount;
