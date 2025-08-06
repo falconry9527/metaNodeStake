@@ -95,6 +95,7 @@ contract MetaNodeStake is
     // First block that MetaNodeStake will end from
     uint256 public endBlock;
     // MetaNode token reward per block
+    // 每个区块的奖励
     uint256 public MetaNodePerBlock;
 
     // Pause the withdraw function
