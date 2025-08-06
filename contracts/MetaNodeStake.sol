@@ -377,6 +377,7 @@ contract MetaNodeStake is
      * 3. 每个抵押代币 累计可以获得的奖励
      * accMetaNodePerST = accMetaNodePerST + MetaNodeForPool * (1 ether) / stSupply;
      * 4. 算出用户最新的 可以获得的奖励
+     *
      */
     function pendingMetaNodeByBlockNumber(uint256 _pid, address _user, uint256 _blockNumber) public checkPid(_pid) view returns(uint256) {
         Pool storage pool_ = pool[_pid];

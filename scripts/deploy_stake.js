@@ -16,9 +16,9 @@ async function main() {
     [metaNodeToken, startBlock, endBlock, metaNodePerBlock],
     { initializer: "initialize" }
   );
-  console.log("deploying...");
+  console.log("deploying stake ...");
   await stakeProxy.waitForDeployment();
-  console.log("Box deployed to:", await stakeProxy.getAddress());
+  console.log("stake deployed to:", await stakeProxy.getAddress());
 }
 
 main();
