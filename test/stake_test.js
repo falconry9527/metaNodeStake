@@ -34,7 +34,7 @@ describe("MetaNodeStake test)", function () {
         await stakeProxy.waitForDeployment();
         console.log("stake deployed to:", await stakeProxy.getAddress());
 
-        // 三.测试功能
+        // 二.测试功能
         [owner, seller, bidder1, bidder2] = await ethers.getSigners();
         // 1. addPool
         await stakeProxy.connect(owner).addPool(ethers.ZeroAddress, 500, 100, 20, true);
