@@ -390,7 +390,7 @@ contract MetaNodeStake is
             uint256 MetaNodeForPool = multiplier * pool_.poolWeight / totalPoolWeight;
             accMetaNodePerST = accMetaNodePerST + MetaNodeForPool * (1 ether) / stSupply;
         }
-
+        // 用户抵押金额 * 每个代币累计可以获得的奖励- 用户提现的钱 + 当前可取数量
         return user_.stAmount * accMetaNodePerST / (1 ether) - user_.finishedMetaNode + user_.pendingMetaNode;
     }
 
@@ -409,8 +409,10 @@ contract MetaNodeStake is
 
         for (uint256 i = 0; i < user_.requests.length; i++) {
             if (user_.requests[i].unlockBlocks <= block.number) {
+                // 已经得到 但是 还未分配的 的token数量
                 pendingWithdrawAmount = pendingWithdrawAmount + user_.requests[i].amount;
             }
+            // 请求的（还未分配的）代币数量
             requestAmount = requestAmount + user_.requests[i].amount;
         }
     }
