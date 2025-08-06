@@ -17,75 +17,61 @@ contract MetaNodeStake is
     PausableUpgradeable,
     AccessControlUpgradeable
 {
-    using SafeERC20 for IERC20; // using ： 声明 SafeERC20 可以调用 IERC20 所欲的的函数
+    using SafeERC20 for IERC20;
     using Address for address;
     using Math for uint256;
 
     // ************************************** INVARIANT **************************************
 
-    // 管理员 和 升级人
     bytes32 public constant ADMIN_ROLE = keccak256("admin_role");
     bytes32 public constant UPGRADE_ROLE = keccak256("upgrade_role");
 
-    uint256 public constant nativeCurrency_PID = 0;
-
+    uint256 public constant ETH_PID = 0;
+    
     // ************************************** DATA STRUCTURE **************************************
     /*
     Basically, any point in time, the amount of MetaNodes entitled to a user but is pending to be distributed is:
 
-    // 获取代币奖励的计算公式 
     pending MetaNode = (user.stAmount * pool.accMetaNodePerST) - user.finishedMetaNode
 
     Whenever a user deposits or withdraws staking tokens to a pool. Here's what happens:
-    // staking tokens   质押的代币
     1. The pool's `accMetaNodePerST` (and `lastRewardBlock`) gets updated.
     2. User receives the pending MetaNode sent to his/her address.
     3. User's `stAmount` gets updated.
     4. User's `finishedMetaNode` gets updated.
     */
     struct Pool {
-        // Address of staking token ：质押代币的地址
+        // Address of staking token 质押代币的地址
         address stTokenAddress;
-        // Weight of pool ： 奖金池的高度
-        uint256 poolWeight; 
+        // Weight of pool 不同资金池所占的权重
+        uint256 poolWeight;
         // Last block number that MetaNodes distribution occurs for pool 
-        // MetaNodes 为矿池分发的最后一个区块号 
         uint256 lastRewardBlock;
         // Accumulated MetaNodes per staking token of pool
-        // 累计 奖励的 MetaNodes
         uint256 accMetaNodePerST;
         // Staking token amount
-        // 质押代币的金额
         uint256 stTokenAmount;
         // Min staking amount
-        // 最小代币质押金额
         uint256 minDepositAmount;
         // Withdraw locked blocks
-        // 提现锁住的区块
         uint256 unstakeLockedBlocks;
     }
 
-   // 取消质押的请求
     struct UnstakeRequest {
-        // Request withdraw amount ：金额
+        // Request withdraw amount
         uint256 amount;
         // The blocks when the request withdraw amount can be released
-        // 取消质押的 区块
         uint256 unlockBlocks;
     }
 
     struct User {
         // Staking token amount that user provided
-        // 质押的代币数据
         uint256 stAmount;
-        // Finished distributed MetaNodes to user
-        // 完成分配的 MetaNodes 数量
+        // Finished distributed MetaNodes to user 最终 MetaNode 得到的数量
         uint256 finishedMetaNode;
-        // Pending to claim MetaNodes
-        // 等待领取的节点
+        // Pending to claim MetaNodes 当前可取数量
         uint256 pendingMetaNode;
         // Withdraw request list
-        // 提现请求列表
         UnstakeRequest[] requests;
     }
 
@@ -95,14 +81,11 @@ contract MetaNodeStake is
     // First block that MetaNodeStake will end from
     uint256 public endBlock;
     // MetaNode token reward per block
-    // 每个区块的奖励
     uint256 public MetaNodePerBlock;
 
     // Pause the withdraw function
-    // 暂停提现功能
     bool public withdrawPaused;
     // Pause the claim function
-    // 暂停索赔功能
     bool public claimPaused;
 
     // MetaNode token
@@ -113,43 +96,40 @@ contract MetaNodeStake is
     Pool[] public pool;
 
     // pool id => user address => user info
-    // 用户的 mapping 
     mapping (uint256 => mapping (address => User)) public user;
 
     // ************************************** EVENT **************************************
-    // 一些日志事件
-   
+
     event SetMetaNode(IERC20 indexed MetaNode);
 
-    event PauseWithdraw();// 暂停提现
+    event PauseWithdraw();
 
-    event UnpauseWithdraw(); //  取消 暂停提现
+    event UnpauseWithdraw();
 
-    event PauseClaim(); // 暂停索赔
+    event PauseClaim();
 
-    event UnpauseClaim(); //取消暂停索赔
+    event UnpauseClaim();
 
-    event SetStartBlock(uint256 indexed startBlock); // 设置开始区块ID
+    event SetStartBlock(uint256 indexed startBlock);
 
-    event SetEndBlock(uint256 indexed endBlock); // 设置结束区块ID
+    event SetEndBlock(uint256 indexed endBlock);
 
-    event SetMetaNodePerBlock(uint256 indexed MetaNodePerBlock); // 设置每个块的 metanode
+    event SetMetaNodePerBlock(uint256 indexed MetaNodePerBlock);
 
-    // 添加一个池子
     event AddPool(address indexed stTokenAddress, uint256 indexed poolWeight, uint256 indexed lastRewardBlock, uint256 minDepositAmount, uint256 unstakeLockedBlocks);
-    // 更新池子的信息
+
     event UpdatePoolInfo(uint256 indexed poolId, uint256 indexed minDepositAmount, uint256 indexed unstakeLockedBlocks);
-    // 设置池子的高度
+
     event SetPoolWeight(uint256 indexed poolId, uint256 indexed poolWeight, uint256 totalPoolWeight);
-    // 更新池子
+
     event UpdatePool(uint256 indexed poolId, uint256 indexed lastRewardBlock, uint256 totalMetaNode);
-    // 存款
+
     event Deposit(address indexed user, uint256 indexed poolId, uint256 amount);
-    // 申请取消质押
+
     event RequestUnstake(address indexed user, uint256 indexed poolId, uint256 amount);
-    // 提现
+
     event Withdraw(address indexed user, uint256 indexed poolId, uint256 amount, uint256 indexed blockNumber);
-    // 索赔
+
     event Claim(address indexed user, uint256 indexed poolId, uint256 MetaNodeReward);
 
     // ************************************** MODIFIER **************************************
@@ -182,8 +162,6 @@ contract MetaNodeStake is
 
         __AccessControl_init();
         __UUPSUpgradeable_init();
-         __Pausable_init();
-         // AccessControlUpgradeable 的方法： 授予权限
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(UPGRADE_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
@@ -208,7 +186,6 @@ contract MetaNodeStake is
 
     /**
      * @notice Set MetaNode token address. Can only be called by admin
-     * 设置 MetaNode 代币地址，仅管理员可调用
      */
     function setMetaNode(IERC20 _MetaNode) public onlyRole(ADMIN_ROLE) {
         MetaNode = _MetaNode;
@@ -298,7 +275,7 @@ contract MetaNodeStake is
      * DO NOT add the same staking token more than once. MetaNode rewards will be messed up if you do
      */
     function addPool(address _stTokenAddress, uint256 _poolWeight, uint256 _minDepositAmount, uint256 _unstakeLockedBlocks,  bool _withUpdate) public onlyRole(ADMIN_ROLE) {
-        // Default the first pool to be nativeCurrency pool, so the first pool must be added with stTokenAddress = address(0x0)
+        // Default the first pool to be ETH pool, so the first pool must be added with stTokenAddress = address(0x0)
         if (pool.length > 0) {
             require(_stTokenAddress != address(0x0), "invalid staking token address");
         } else {
@@ -344,7 +321,7 @@ contract MetaNodeStake is
      */
     function setPoolWeight(uint256 _pid, uint256 _poolWeight, bool _withUpdate) public onlyRole(ADMIN_ROLE) checkPid(_pid) {
         require(_poolWeight > 0, "invalid pool weight");
-
+        
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -369,9 +346,10 @@ contract MetaNodeStake is
      *
      * @param _from    From block number (included)
      * @param _to      To block number (exluded)
+     * getMultiplier(pool_.lastRewardBlock, block.number).tryMul(pool_.poolWeight);
      */
     function getMultiplier(uint256 _from, uint256 _to) public view returns(uint256 multiplier) {
-        require(_from <= _to, "invalid block range");
+        require(_from <= _to, "invalid block");
         if (_from < startBlock) {_from = startBlock;}
         if (_to > endBlock) {_to = endBlock;}
         require(_from <= _to, "end block must be greater than start block");
@@ -439,21 +417,21 @@ contract MetaNodeStake is
         }
 
         (bool success1, uint256 totalMetaNode) = getMultiplier(pool_.lastRewardBlock, block.number).tryMul(pool_.poolWeight);
-        require(success1, "totalMetaNode mul poolWeight overflow");
+        require(success1, "overflow");
 
         (success1, totalMetaNode) = totalMetaNode.tryDiv(totalPoolWeight);
-        require(success1, "totalMetaNode div totalPoolWeight overflow");
+        require(success1, "overflow");
 
         uint256 stSupply = pool_.stTokenAmount;
         if (stSupply > 0) {
             (bool success2, uint256 totalMetaNode_) = totalMetaNode.tryMul(1 ether);
-            require(success2, "totalMetaNode mul 1 ether overflow");
+            require(success2, "overflow");
 
             (success2, totalMetaNode_) = totalMetaNode_.tryDiv(stSupply);
-            require(success2, "totalMetaNode div stSupply overflow");
+            require(success2, "overflow");
 
             (bool success3, uint256 accMetaNodePerST) = pool_.accMetaNodePerST.tryAdd(totalMetaNode_);
-            require(success3, "pool accMetaNodePerST overflow");
+            require(success3, "overflow");
             pool_.accMetaNodePerST = accMetaNodePerST;
         }
 
@@ -473,16 +451,16 @@ contract MetaNodeStake is
     }
 
     /**
-     * @notice Deposit staking nativeCurrency for MetaNode rewards
+     * @notice Deposit staking ETH for MetaNode rewards
      */
-    function depositnativeCurrency() public whenNotPaused() payable {
-        Pool storage pool_ = pool[nativeCurrency_PID];
+    function depositETH() public whenNotPaused() payable {
+        Pool storage pool_ = pool[ETH_PID];
         require(pool_.stTokenAddress == address(0x0), "invalid staking token address");
 
         uint256 _amount = msg.value;
         require(_amount >= pool_.minDepositAmount, "deposit amount is too small");
 
-        _deposit(nativeCurrency_PID, _amount);
+        _deposit(ETH_PID, _amount);
     }
 
     /**
@@ -493,7 +471,7 @@ contract MetaNodeStake is
      * @param _amount    Amount of staking tokens to be deposited
      */
     function deposit(uint256 _pid, uint256 _amount) public whenNotPaused() checkPid(_pid) {
-        require(_pid != 0, "deposit not support nativeCurrency staking");
+        require(_pid != 0, "deposit not support ETH staking");
         Pool storage pool_ = pool[_pid];
         require(_amount > pool_.minDepositAmount, "deposit amount is too small");
 
@@ -567,7 +545,7 @@ contract MetaNodeStake is
 
         if (pendingWithdraw_ > 0) {
             if (pool_.stTokenAddress == address(0x0)) {
-                _safenativeCurrencyTransfer(msg.sender, pendingWithdraw_);
+                _safeETHTransfer(msg.sender, pendingWithdraw_);
             } else {
                 IERC20(pool_.stTokenAddress).safeTransfer(msg.sender, pendingWithdraw_);
             }
@@ -619,7 +597,7 @@ contract MetaNodeStake is
             require(success1, "user stAmount mul accMetaNodePerST overflow");
             (success1, accST) = accST.tryDiv(1 ether);
             require(success1, "accST div 1 ether overflow");
-
+            
             (bool success2, uint256 pendingMetaNode_) = accST.trySub(user_.finishedMetaNode);
             require(success2, "accST sub finishedMetaNode overflow");
 
@@ -669,21 +647,21 @@ contract MetaNodeStake is
     }
 
     /**
-     * @notice Safe nativeCurrency transfer function
+     * @notice Safe ETH transfer function
      *
-     * @param _to        Address to get transferred nativeCurrency
-     * @param _amount    Amount of nativeCurrency to be transferred
+     * @param _to        Address to get transferred ETH
+     * @param _amount    Amount of ETH to be transferred
      */
-    function _safenativeCurrencyTransfer(address _to, uint256 _amount) internal {
+    function _safeETHTransfer(address _to, uint256 _amount) internal {
         (bool success, bytes memory data) = address(_to).call{
             value: _amount
         }("");
 
-        require(success, "nativeCurrency transfer call failed");
+        require(success, "ETH transfer call failed");
         if (data.length > 0) {
             require(
                 abi.decode(data, (bool)),
-                "nativeCurrency transfer operation did not succeed"
+                "ETH transfer operation did not succeed"
             );
         }
     }
