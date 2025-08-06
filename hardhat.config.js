@@ -19,5 +19,11 @@ module.exports = {
       default: 0, // 默认使用第一个账户作为部署者
     },
   },
-  
+  settings: {
+    optimizer: {
+      enabled: true,  // 启用优化器
+      runs: 200       // 优化次数(200-1000之间)
+    }
+  }
+
 };
