@@ -347,6 +347,7 @@ contract MetaNodeStake is
      * @param _from    From block number (included)
      * @param _to      To block number (exluded)
      * getMultiplier(pool_.lastRewardBlock, block.number).tryMul(pool_.poolWeight);
+     *  获取 n 个块 能够得到的总的代币奖励
      */
     function getMultiplier(uint256 _from, uint256 _to) public view returns(uint256 multiplier) {
         require(_from <= _to, "invalid block");
@@ -367,6 +368,15 @@ contract MetaNodeStake is
 
     /**
      * @notice Get pending MetaNode amount of user by block number in pool
+     * 获取某个用用户（_user），某个抵押池子pool(_pid) ,截止某个 _blockNumber （开始于lastRewardBlock ）
+     * 可以获得的 token 奖励
+     * 1. 算出 n 个block  总的 token 奖励
+     * uint256 multiplier = getMultiplier(pool_.lastRewardBlock, _blockNumber);
+     * 2. 算出 某个抵押代币pool 总的奖励 (根据权重)
+     * uint256 MetaNodeForPool = multiplier * pool_.poolWeight / totalPoolWeight;
+     * 3. 每个抵押代币 累计可以获得的奖励
+     * accMetaNodePerST = accMetaNodePerST + MetaNodeForPool * (1 ether) / stSupply;
+     * 4. 算出用户最新的 可以获得的奖励
      */
     function pendingMetaNodeByBlockNumber(uint256 _pid, address _user, uint256 _blockNumber) public checkPid(_pid) view returns(uint256) {
         Pool storage pool_ = pool[_pid];
