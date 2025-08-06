@@ -22,7 +22,7 @@ npm install @chainlink/contracts
 ```
 npx hardhat clean && npx hardhat compile
 
-npx hardhat run scripts/deploy.js --network sepolia
+npx hardhat run scripts/deploy_stake.js --network sepolia
 ```
 
 
