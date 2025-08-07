@@ -575,7 +575,7 @@ contract MetaNodeStake is
 
     /**
      * @notice Claim MetaNode tokens reward
-     *
+     * 领取代币奖励
      * @param _pid       Id of the pool to be claimed from
      */
     function claim(uint256 _pid) public whenNotPaused() checkPid(_pid) whenNotClaimPaused() {
