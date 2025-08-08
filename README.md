@@ -37,4 +37,16 @@ LP代币: 当用户向流动性池存入两种代币时(如ETH和USDT)，会获�
 交易手续费：流动性提供者分享池中交易产生的手续费
 挖矿奖励：项目方发放的激励代币
 LP代币抵押： 可以获得平台币
+
+openzeppelin:
+1. 权限管理
+AccessControlUpgradeable:
+授予权限:
+_grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+检查权限:
+onlyRole(UPGRADE_ROLE)
+
+2. UUPSUpgradeable
+代理审计
+
 ```
